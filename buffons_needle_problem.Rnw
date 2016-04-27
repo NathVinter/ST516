@@ -1,0 +1,119 @@
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+
+ \begin{center}
+ \rule{\textwidth}{1.6pt}\vspace*{-\baselineskip}\vspace*{2pt} % Thick horizontal line
+ \rule{\textwidth}{0.4pt}\\[\baselineskip] % Thin horizontal line
+ 
+ {\LARGE Test\\[0.3\baselineskip]} % Title
+ 
+ \rule{\textwidth}{0.4pt}\vspace*{-\baselineskip}\vspace{3.2pt} % Thin horizontal line
+ \rule{\textwidth}{1.6pt}\\[\baselineskip] % Thick horizontal line
+ \title{}
+ \textsc{
+ Maria Nathalia Vinter Kristensen;\\ mkris13@student.sdu.dk \\(ST516 exercises)\\[2\baselineskip]
+ Spring 2016}
+ \end{center}
+ \maketitle
+
+\section*{Buffon's needle}
+In Buffon's needle problem dates back to 1733 where Georges-Louis Leclerc, Comte de Buffon in his \textit{Sur le jeu de franc-carreau} put forward the needle problem stating:\\
+\textit{"Suppose we have a floor made of parallel strips of wood, each the same width, and we drop a needle onto the floor. What is the probability that the needle will lie across a line between two strips?"}\\
+\\
+For the R-script we have following variables\\
+$n$: # needles\\
+$l$: length of needles\\
+$d$: distance between lines in floor\\
+$dig$: # decimal places in resulting estimation of $\pi$\\
+\\
+Let $x$ be the shortest distance from the lower end of the needle to the closest line above and $\theta$ the angle between the needle and horizontal alignment. We suppose the placement of the needle - here described through the ends of the needle - is equally likely to occur anywhere between or on the lines. Any angles at which the needle could land is likewise assumed to be equally likely.\\
+The angle $\theta$ lies in $(0,\pi]$. If $\theta>\pi$ then it's not the lower end. $x$ lies in $[0,d]$.\\
+
+\begin{tikzpicture}
+\draw (0,0) -- (8,0);
+\draw (0,2) -- (8,2);
+\draw (0.5,0.2) -- (2.5,1.2);
+\draw (2.5,1.2) -- (4.5,2.2);
+\draw [->] (0.5,0.2) -- (4.5,0.2);
+\draw [<->] (3.5,1.7) to [out=310,in=90] (4,0.2);
+\node at (4.1, 1) {$\theta$};
+\draw [<->] (0.5,0.2) -- (0.5,2);
+\node at (0.3,1.1) {x};
+\draw [<->] (6,0) -- (6,2);
+\node at (5.8,1) {d};
+\node at (2.3,1.4) {l};
+\end{tikzpicture}
+\\
+
+Using that for a uniform distibution the p.d.f. is $\frac{1}{b-a}$ for $x\in[a,b]$, zero otherwise, we have $x\sim U(0,d)$ and thereby $f(x)=\frac{1}{d}, 0\leq x \leq d$ and $\theta\sim U(0,\pi)$ and thereby $f(\theta)=\frac{1}{\pi}$\\
+Since the position of the needle and the angle of the needle are independent, their joint probability function is $f(x,\theta)=\frac{1}{d\cdot \pi}$
+
+The needle is on the line if $x\leq sin(\theta)\cdot l$, so the probability, that the needle will cross a line is 
+
+$F(x,\theta)=\int\limits_{X}{\int\limits_{\Theta}{f(x,\theta)}}=\int\limits_{0}^{\pi}{\int\limits_{0}^{sin(\theta)\cdot l}{\frac{1}{d\cdot \pi}dxd\theta}}=\frac{2l}{d\pi}$\\
+
+For a long needle, say $l=2d$, we get $p=\frac{4d}{d\pi}=\frac{4}{\pi}>1$, which is clearly wrong. We therefore need to reconsider the problem, when $d<l$.\\
+The probability is the same as long as $sin(\theta)\cdot l \leq d\Rightarrow \theta\leq sin^{-1}(\frac{d}{l})$. If the angle is bigger than that, the needle crossed no matter what yielding a probability of $1$ for a hit. We can therefore rewrite our function for $d<l$:\\
+$$F(x,\theta)=2\cdot \int\limits_{X}{\int\limits_{\Theta}{f(x,\theta)}}=\frac{2}{\pi}\left(\int\limits_{0}^{sin^{-1}(\frac{d}{l})}{\int\limits_{0}^{sin(\theta)\cdot l}{\frac{1}{d}dxd\theta}}+\int\limits_{sin^{-1}(\frac{d}{l})}^{\pi/2}{1}d\theta}}\right)$$
+$$=\frac{2}{\pi}\left( \frac{l\left(1-\sqrt{1-\frac{d^2}{l^2}}\right)}{d}+\frac{\pi}{2}-sin^{-1}\left(\frac{d}{l}\right)\right)$$
+
+\section*{Lazzarini's Lucky Approximation of $\pi$}
+Now recognize, that the theoretical probability can be expressed as the relative frequency of hits, $\frac{n}{n_{hit}}\approx \frac{2l}{d\pi}$, which means $\pi$ can be estimated as $\hat{\pi}=\frac{2ln}{dn_{hit}}$.\\
+This experiment is caried out below. Here $dig$ is number og decimal returned when estimating $\pi$.
+
+<<buffon>>=
+buffon.needle = function(n, l, d, dig) {
+  X = runif(n,0,d)
+  t = runif(n,0,pi)
+  hits = sum(ifelse(X<=sin(t)*l,1,0))
+  if (d>=l) {
+    est.pi = round(2*n*l/(d*hits),dig)
+  } else {
+    est.pi = round((2*n*(-l*sqrt((l^2-d^2)/(l^2))-d*asin(d/l)+l))/(d*hits-d*n),dig)
+  }
+  sprintf(format(pi,digits=dig+1))
+  return(est.pi)
+}
+@
+
+\section*{Simulation}
+In the simulation I keep $l$ fixed. The plots can be seen in the appendix.
+As seen on the plots, the estimation seems to have the smallest error, when the ratio of the distance between lines and the length of is above 1 ($\approx \frac{6}{5}$), i.e. when $d<l0$ the estimate has an error of up to 0.35, approximately $11\%$.
+
+<<simulation, include=TRUE>>=
+sim = function(l) {
+  l = l
+  d = seq(0.01,3,0.01)
+  n = c(1000,10000,100000)
+  sim = matrix(nrow=length(d),ncol=length(n),dimnames = list(d,n))
+  
+  for (i in 1:length(n)) {
+    for (j in 1:length(d)) {
+      sim[j,i] = buffon.needle(n[i],l,d[j],6)
+    }
+  }
+
+  for (i in 1:3) {
+    plot(d,sim[,i],
+         ylim=c(min(sim[,i])-0.1,max(sim[,i])+0.1),
+         ylab="Estimated pi",
+         xlab="Distance between lines in floor",
+         main=paste("Simulation with l=",l ,n[i],"needles"))
+    abline(a=pi,b=0, col="red")
+  }
+ }
+@
+
+\section*{Appendix}
+\subsection*{Simulation of needle length 1}
+<<>>=
+sim(1)
+@
+
+\subsection*{Simulation of needle length 2}
+<<>>=
+sim(2)
+@
+
+\end{document}
